@@ -5,14 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EncryptDecrypt"
         mc:Ignorable="d"
-        Title="MainWindow" Height="250" Width="800">
+        Title="MainWindow" Height="200" Width="800">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition/>
-            <RowDefinition Height="2*"/>
+            <RowDefinition Height="1.5*"/>
+            <RowDefinition Height="0.6*"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Grid Grid.Row="1" VerticalAlignment="Center">
+        <Grid Grid.Row="1">
+            <ProgressBar Name="Progressbar" Height="20" VerticalAlignment="Top" Width="300"></ProgressBar>
+        </Grid>
+        <Grid Grid.Row="0" VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="0.1*"/>
@@ -27,21 +30,21 @@
                 <RowDefinition/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="1" Grid.Column="2">
-                <TextBox Height="20"/>
+                <TextBox Name="FilePathtxtbox" Height="20"/>
             </Grid>
             <Grid Grid.Row="1" Grid.Column="0">
-                <Button Content="File" FontFamily="Arial" FontSize="20" Width="60" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                <Button Name="FileOpenBtn" Content="File" FontFamily="Arial" FontSize="20" Width="60" VerticalAlignment="Center" HorizontalAlignment="Right" Click="FileOpenBtn_Click"/>
             </Grid>
             <Grid Grid.Row="2" Grid.Column="0">
                 <TextBlock Text="Password" FontSize="20" FontFamily="Arial" VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </Grid>
             <Grid Grid.Row="2" Grid.Column="2">
-                <TextBox Height="20"/>
+                <TextBox Name="Passwordtxtbox" Height="20"/>
             </Grid>
 
             <Grid Grid.Row="2" Grid.Column="4">
-                <RadioButton Content="Encrypt" IsChecked="True" FontFamily="Arial" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                <RadioButton Content="Decrypt" IsChecked="False" FontFamily="Arial" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <RadioButton Name="Encryptrbtn" Content="Encrypt" IsChecked="True" FontFamily="Arial" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <RadioButton Name="Decryptrbtn" Content="Decrypt" IsChecked="False" FontFamily="Arial" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
         </Grid>
         <Grid Grid.Row="2" VerticalAlignment="Top">
@@ -50,8 +53,8 @@
                 <ColumnDefinition Width="0.1*"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <Button Content="Start" FontFamily="Arial" HorizontalAlignment="Right" Width="80" Height="25"/>
-            <Button Grid.Column="2" FontFamily="Arial" Content="Cancel" HorizontalAlignment="Left" Width="80" Height="25"/>
+            <Button Name="StartBtn" Content="Start" FontFamily="Arial" HorizontalAlignment="Right" Width="80" Height="25" Click="EncryptDecryptBtn_Click"/>
+            <Button Name="CancelBtn" Grid.Column="2" FontFamily="Arial" Content="Cancel" HorizontalAlignment="Left" Width="80" Height="25" Click="Cancel_Click"/>
         </Grid>
     </Grid>
 </Window>
