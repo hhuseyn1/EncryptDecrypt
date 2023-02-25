@@ -1,10 +1,10 @@
-﻿using System.IO;
-using System.Security.Cryptography;
+﻿using Microsoft.Win32;
+using System.IO;
 using System.Text;
-using System;
 using System.Threading;
 using System.Windows;
-using Microsoft.Win32;
+using System.Security.Cryptography;
+using System;
 
 namespace EncryptDecrypt;
 
@@ -30,133 +30,144 @@ public partial class MainWindow : Window
 
     private void EncryptDecryptBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (Passwordtxtbox.Text is null)
-            return;
-        cancellation= new CancellationTokenSource();
+        if (Passwordtxtbox.Text.Length < 16) { MessageBox.Show("Password length must have 16 character", "Warning",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
+        if (!File.Exists(FilePathtxtbox.Text)) return;
+
+        Progressbar.Value = 0;
+
+        cancellation = new CancellationTokenSource();
+
+        if (Encryptrbtn.IsChecked == true)
+            Encrypt(cancellation.Token);
+
+        if (Decryptrbtn.IsChecked == true)
+            Decrypt(cancellation.Token);
+
+    }
+
+    private void Encrypt(CancellationToken token)
+    {
         var text = File.ReadAllText(FilePathtxtbox.Text);
-        var writeText = Encrypt(text, password);
-        if ((bool)Encryptrbtn.IsChecked)
+
+        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Text);
+
+        var bytesToWrite = EncryptStringToBytes(text, key, key);
+
+        ThreadPool.QueueUserWorkItem(o =>
         {
-            ThreadPool.QueueUserWorkItem(o =>
+            using var fs = new FileStream(FilePathtxtbox.Text, FileMode.Truncate);
+
+            for (int i = 0; i < bytesToWrite.Length; i++)
             {
-                using var fs = new FileStream(FilePathtxtbox.Text, FileMode.Open);
-
-                for (int i = 0; i < writeText.Length; i++)
+                if (i % 32 == 0)
                 {
-                    if (i % 32 == 0)
+                    if (token.IsCancellationRequested)
                     {
-                        if (cancellation.IsCancellationRequested)
-                        {
-                            fs.Dispose();
-                            Dispatcher.Invoke(() => File.WriteAllText(FilePathtxtbox.Text, text));
-                            Dispatcher.Invoke(() => Progressbar.Value = 0);
-                            return;
-                        }
-
-                        Thread.Sleep(500);
-                        if (i != 0)
-                            Dispatcher.Invoke(() => Progressbar.Value = 100 * i / writeText.Length);
+                        fs.Dispose();
+                        Dispatcher.Invoke(() => File.WriteAllText(FilePathtxtbox.Text, text));
+                        Dispatcher.Invoke(() => Progressbar.Value = 0);
+                        return;
                     }
-                    fs.WriteByte((byte)writeText[i]);
+
+                    Thread.Sleep(500);
+                    if (i != 0)
+                        Dispatcher.Invoke(() => Progressbar.Value = 100 * i / bytesToWrite.Length);
                 }
+                fs.WriteByte(bytesToWrite[i]);
+            }
 
-                fs.Seek(0, SeekOrigin.Begin);
+            fs.Seek(0, SeekOrigin.Begin);
 
-                Dispatcher.Invoke(() => Progressbar.Value = 100);
-            });
-        }
-
-        else if ((bool)Decryptrbtn.IsChecked)
-        {
-            writeText = Decrypt(text, password);
-            ThreadPool.QueueUserWorkItem(o =>
-            {
-                using var fs = new FileStream(FilePathtxtbox.Text, FileMode.Truncate);
-
-                for (int i = 0; i < writeText.Length; i++)
-                {
-                    if (i % 32 == 0)
-                    {
-                        if (cancellation.IsCancellationRequested)
-                        {
-                            fs.Dispose();
-                            Dispatcher.Invoke(() => File.WriteAllText(FilePathtxtbox.Text, text));
-                            Dispatcher.Invoke(() => Progressbar.Value = 0);
-                            return;
-                        }
-
-                        Thread.Sleep(500);
-                        if (i != 0)
-                            Dispatcher.Invoke(() => Progressbar.Value = 100 * i / writeText.Length);
-                    }
-                    fs.WriteByte((byte)writeText[i]);
-                }
-
-                fs.Seek(0, SeekOrigin.Begin);
-
-                Dispatcher.Invoke(() => Progressbar.Value = 100);
-            });
-        }
-
+            Dispatcher.Invoke(() => Progressbar.Value = 100);
+        });
     }
 
-    public static string Encrypt(string clearText,string password)
+    private void Decrypt(CancellationToken token)
     {
-        string EncryptionKey = password;
-        byte[] clearBytes = Encoding.Unicode.GetBytes(clearText);
-        using (Aes encryptor = Aes.Create())
+        var bytes = File.ReadAllBytes(FilePathtxtbox.Text);
+
+        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Text);
+
+        var text = DecryptStringFromBytes(bytes, key, key);
+        var bytesToWrite = Encoding.UTF8.GetBytes(text);
+
+
+        ThreadPool.QueueUserWorkItem(o =>
         {
-            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(EncryptionKey, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 });
-            encryptor.Key = pdb.GetBytes(32);
-            encryptor.IV = pdb.GetBytes(16);
-            using (MemoryStream ms = new MemoryStream())
+            using var fs = new FileStream(FilePathtxtbox.Text, FileMode.Truncate);
+
+            for (int i = 0; i < bytesToWrite.Length; i++)
             {
-                using (CryptoStream cs = new CryptoStream(ms, encryptor.CreateEncryptor(), CryptoStreamMode.Write))
+                if (i % 32 == 0)
                 {
-                    cs.Write(clearBytes, 0, clearBytes.Length);
-                    cs.Close();
+                    if (token.IsCancellationRequested)
+                    {
+                        fs.Dispose();
+                        Dispatcher.Invoke(() => File.WriteAllBytes(FilePathtxtbox.Text, bytes));
+                        Dispatcher.Invoke(() => Progressbar.Value = 0);
+                        return;
+                    }
+
+                    Thread.Sleep(500);
+                    if (i != 0)
+                        Dispatcher.Invoke(() => Progressbar.Value = 100 * i / bytesToWrite.Length);
                 }
-                clearText = Convert.ToBase64String(ms.ToArray());
+                fs.WriteByte(bytesToWrite[i]);
+            }
+
+            fs.Seek(0, SeekOrigin.Begin);
+
+            Dispatcher.Invoke(() => Progressbar.Value = 100);
+        });
+    }
+
+    private static byte[] EncryptStringToBytes(string original, byte[] key, byte[] IV)
+    {
+        byte[] encrypted;
+        using (var encryption = Aes.Create())
+        {
+            encryption.Key = key;
+            encryption.IV = IV;
+
+
+            ICryptoTransform encryptor = encryption.CreateEncryptor(encryption.Key, encryption.IV);
+
+            using var msEncrypt = new MemoryStream();
+            using var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write);
+
+            using (var swEncrypt = new StreamWriter(csEncrypt))
+                swEncrypt.Write(original);
+
+            encrypted = msEncrypt.ToArray();
+        }
+
+        return encrypted;
+    }
+
+    private static string DecryptStringFromBytes(byte[] encrypted, byte[] key, byte[] IV)
+    {
+        string plaintext = string.Empty;
+
+        using (var encryption = Aes.Create())
+        {
+            encryption.Key = key;
+            encryption.IV = IV;
+
+            ICryptoTransform decryptor = encryption.CreateDecryptor(encryption.Key, encryption.IV);
+
+            using MemoryStream msDecrypt = new MemoryStream(encrypted);
+            using CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read);
+            using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+            {
+                plaintext = srDecrypt.ReadToEnd();
             }
         }
-        return clearText;
+
+        return plaintext;
     }
 
-public static string Decrypt(string cipherText,string password)
-    {
-        string EncryptionKey = password;
-        cipherText = cipherText.Replace(" ", "+");
-        try
-        {
-            byte[] cipherBytes = Convert.FromBase64String(cipherText);
-            using (Aes encryptor = Aes.Create())
-            {
-                Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(EncryptionKey, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 });
-                encryptor.Key = pdb.GetBytes(32);
-                encryptor.IV = pdb.GetBytes(16);
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    using (CryptoStream cs = new CryptoStream(ms, encryptor.CreateDecryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(cipherBytes, 0, cipherBytes.Length);
-                        cs.Close();
-                    }
-                    cipherText = Encoding.Unicode.GetString(ms.ToArray());
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
 
-        return cipherText;
-    }
 
-    private void DecryptBtn_Click(object sender, RoutedEventArgs e)
-    {
-
-    }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
