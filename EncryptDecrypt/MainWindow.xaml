@@ -39,7 +39,7 @@
                 <TextBlock Text="Password" FontSize="20" FontFamily="Arial" VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </Grid>
             <Grid Grid.Row="2" Grid.Column="2">
-                <TextBox Name="Passwordtxtbox" Height="20"/>
+                <PasswordBox Name="Passwordtxtbox" Height="20"/>
             </Grid>
 
             <Grid Grid.Row="2" Grid.Column="4">

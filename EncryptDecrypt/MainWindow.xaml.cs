@@ -10,13 +10,11 @@ namespace EncryptDecrypt;
 
 public partial class MainWindow : Window
 {
-    public string password;
     CancellationTokenSource cancellation;
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
-        password = Passwordtxtbox.Text;
     }
 
     private void FileOpenBtn_Click(object sender, RoutedEventArgs e)
@@ -24,14 +22,15 @@ public partial class MainWindow : Window
         FileDialog dialog = new OpenFileDialog();
         dialog.Filter = "txt files |*.txt";
 
-        if (dialog.ShowDialog() == true)
-            FilePathtxtbox.Text = dialog.FileName;
+        var result = dialog.ShowDialog();
+        if (result==true)
+         FilePathtxtbox.Text = dialog.FileName;
+
     }
 
     private void EncryptDecryptBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (Passwordtxtbox.Text.Length < 16) { MessageBox.Show("Password length must have 16 character", "Warning",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
-        if (!File.Exists(FilePathtxtbox.Text)) return;
+        if (Passwordtxtbox.Password.Length < 16) { MessageBox.Show("Password length must have 16 character", "Warning",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
 
         Progressbar.Value = 0;
 
@@ -49,9 +48,12 @@ public partial class MainWindow : Window
     {
         var text = File.ReadAllText(FilePathtxtbox.Text);
 
-        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Text);
+        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Password);
 
         var bytesToWrite = EncryptStringToBytes(text, key, key);
+
+        StartBtn.IsEnabled = false;
+        CancelBtn.IsEnabled = true;
 
         ThreadPool.QueueUserWorkItem(o =>
         {
@@ -66,6 +68,7 @@ public partial class MainWindow : Window
                         fs.Dispose();
                         Dispatcher.Invoke(() => File.WriteAllText(FilePathtxtbox.Text, text));
                         Dispatcher.Invoke(() => Progressbar.Value = 0);
+                        Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
                         return;
                     }
 
@@ -78,6 +81,8 @@ public partial class MainWindow : Window
 
             fs.Seek(0, SeekOrigin.Begin);
 
+            Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
+            Dispatcher.Invoke(() => CancelBtn.IsEnabled = false);
             Dispatcher.Invoke(() => Progressbar.Value = 100);
         });
     }
@@ -86,7 +91,7 @@ public partial class MainWindow : Window
     {
         var bytes = File.ReadAllBytes(FilePathtxtbox.Text);
 
-        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Text);
+        var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Password);
 
         var text = DecryptStringFromBytes(bytes, key, key);
         var bytesToWrite = Encoding.UTF8.GetBytes(text);
