@@ -30,7 +30,6 @@ public partial class MainWindow : Window
 
     private void EncryptDecryptBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (Passwordtxtbox.Password.Length < 16) { MessageBox.Show("Password length must have 16 character", "Warning",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
 
         Progressbar.Value = 0;
 
@@ -96,6 +95,8 @@ public partial class MainWindow : Window
         var text = DecryptStringFromBytes(bytes, key, key);
         var bytesToWrite = Encoding.UTF8.GetBytes(text);
 
+        StartBtn.IsEnabled = false;
+        CancelBtn.IsEnabled = true;
 
         ThreadPool.QueueUserWorkItem(o =>
         {
@@ -110,6 +111,7 @@ public partial class MainWindow : Window
                         fs.Dispose();
                         Dispatcher.Invoke(() => File.WriteAllBytes(FilePathtxtbox.Text, bytes));
                         Dispatcher.Invoke(() => Progressbar.Value = 0);
+                        Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
                         return;
                     }
 
@@ -122,6 +124,8 @@ public partial class MainWindow : Window
 
             fs.Seek(0, SeekOrigin.Begin);
 
+            Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
+            Dispatcher.Invoke(() => CancelBtn.IsEnabled = false);
             Dispatcher.Invoke(() => Progressbar.Value = 100);
         });
     }
@@ -170,7 +174,6 @@ public partial class MainWindow : Window
 
         return plaintext;
     }
-
 
 
 
