@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using System.Security.Cryptography;
 using System;
+using System.Timers;
 
 namespace EncryptDecrypt;
 
@@ -38,7 +39,7 @@ public partial class MainWindow : Window
         if (Encryptrbtn.IsChecked == true)
             Encrypt(cancellation.Token);
 
-        if (Decryptrbtn.IsChecked == true)
+        else if (Decryptrbtn.IsChecked == true)
             Decrypt(cancellation.Token);
 
     }
@@ -46,17 +47,13 @@ public partial class MainWindow : Window
     private void Encrypt(CancellationToken token)
     {
         var text = File.ReadAllText(FilePathtxtbox.Text);
-
         var key = Encoding.UTF8.GetBytes(Passwordtxtbox.Password);
 
         var bytesToWrite = EncryptStringToBytes(text, key, key);
-
-        StartBtn.IsEnabled = false;
-        CancelBtn.IsEnabled = true;
+        var fs = new FileStream(FilePathtxtbox.Text, FileMode.Truncate);
 
         ThreadPool.QueueUserWorkItem(o =>
         {
-            using var fs = new FileStream(FilePathtxtbox.Text, FileMode.Truncate);
 
             for (int i = 0; i < bytesToWrite.Length; i++)
             {
@@ -64,10 +61,9 @@ public partial class MainWindow : Window
                 {
                     if (token.IsCancellationRequested)
                     {
-                        fs.Dispose();
+                        fs.Dispose();   
                         Dispatcher.Invoke(() => File.WriteAllText(FilePathtxtbox.Text, text));
                         Dispatcher.Invoke(() => Progressbar.Value = 0);
-                        Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
                         return;
                     }
 
@@ -80,8 +76,6 @@ public partial class MainWindow : Window
 
             fs.Seek(0, SeekOrigin.Begin);
 
-            Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
-            Dispatcher.Invoke(() => CancelBtn.IsEnabled = false);
             Dispatcher.Invoke(() => Progressbar.Value = 100);
         });
     }
@@ -111,7 +105,6 @@ public partial class MainWindow : Window
                         fs.Dispose();
                         Dispatcher.Invoke(() => File.WriteAllBytes(FilePathtxtbox.Text, bytes));
                         Dispatcher.Invoke(() => Progressbar.Value = 0);
-                        Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
                         return;
                     }
 
@@ -124,8 +117,6 @@ public partial class MainWindow : Window
 
             fs.Seek(0, SeekOrigin.Begin);
 
-            Dispatcher.Invoke(() => StartBtn.IsEnabled = true);
-            Dispatcher.Invoke(() => CancelBtn.IsEnabled = false);
             Dispatcher.Invoke(() => Progressbar.Value = 100);
         });
     }
